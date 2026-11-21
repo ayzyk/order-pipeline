@@ -1,0 +1,44 @@
+# One replica on purpose: two relays would not send an event twice (SKIP LOCKED),
+# but they could send events of the same order out of sequence.
+# Recreate stops the old pod before the new one starts for the same reason.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: relay
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: relay
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: relay
+          image: order-pipeline
+          imagePullPolicy: IfNotPresent
+          command: ["/app/relay"]
+          envFrom:
+            - configMapRef:
+                name: order-pipeline-config
+            - secretRef:
+                name: order-pipeline-db
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

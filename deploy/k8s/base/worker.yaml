@@ -1,0 +1,43 @@
+# The topic has 3 partitions, so more than 3 workers in one consumer group
+# would just sit idle.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      # time to finish the current message and leave the consumer group
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: worker
+          image: order-pipeline
+          imagePullPolicy: IfNotPresent
+          command: ["/app/worker"]
+          envFrom:
+            - configMapRef:
+                name: order-pipeline-config
+            - secretRef:
+                name: order-pipeline-db
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

@@ -1,0 +1,22 @@
+# Local cluster: the app from base plus throwaway Postgres and Kafka.
+# In production the database and the broker would be managed services.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: order-pipeline
+
+resources:
+  - namespace.yaml
+  - ../../base
+  - postgres.yaml
+  - kafka.yaml
+
+secretGenerator:
+  - name: order-pipeline-db
+    literals:
+      - DATABASE_URL=postgres://orders:orders@postgres:5432/orders?sslmode=disable
+
+images:
+  - name: ghcr.io/ayzyk/order-pipeline
+    newName: order-pipeline
+    newTag: dev
